@@ -4,39 +4,39 @@
 
 #define SS_PIN 10
 #define RST_PIN 9
-MFRC522 rfid(SS_PIN, RST_PIN); // Инициализация RFID модуля
+MFRC522 rfid(SS_PIN, RST_PIN); // Ініціалізація RFID модуля
 
-GMotor2<DRIVER2WIRE> motor(4, 5); // Инициализация мотора на пинах 4 и 5
-const int buttonPin = 8;          // Пин кнопки
-const int doorSensorPin = 7;      // Пин геркона (датчика двери)
-const int piezoPin = 3;           // Пин для пьезоизлучателя
+GMotor2<DRIVER2WIRE> motor(4, 5); // Ініціалізація мотора на пінах 4 і 5
+const int buttonPin = 8;          // Пін кнопки
+const int doorSensorPin = 2;      // Пін геркона (датчика дверей)
+const int piezoPin = 3;           // Пін для п'єзоелектричного динаміка
 
-bool lockState = false;           // Состояние замка (false - открыт, true - закрыт)
+bool lockState = false;           // Стан замка (false - відкритий, true - закритий)
 
-const String validCards[4] = {"6365C807", "0E047004794415", "04FC8FE2735980", "030449FA"}; // Список допустимых карт
+const String validCards[4] = {"00112233", "44556677", "8899AABB", "CCDDEEFF"}; // Список допустимих карт
 
 void setup() {
   Serial.begin(9600);
-  SPI.begin();        // Инициализация SPI для RFID модуля
-  rfid.PCD_Init();    // Инициализация RFID модуля
+  SPI.begin();        // Ініціалізація SPI для RFID модуля
+  rfid.PCD_Init();    // Ініціалізація RFID модуля
 
-  motor.setMinDuty(70);    // мин. ШИМ
-  motor.smoothMode(0);     // плавный режим 0 (отключен)
+  motor.setMinDuty(70);    // Мін. ШІМ
+  motor.smoothMode(0);     // Плавний режим 0 (вимкнено)
 
-  pinMode(buttonPin, INPUT);       // Настройка пина кнопки
-  pinMode(doorSensorPin, INPUT_PULLUP); // Настройка пина геркона (подтяжка к питанию)
-  pinMode(piezoPin, OUTPUT);       // Настройка пина для пьезоизлучателя
+  pinMode(buttonPin, INPUT);       // Налаштування піна кнопки як вхідного
+  pinMode(doorSensorPin, INPUT_PULLUP); // Налаштування піна геркона (підтяжка до живлення)
+  pinMode(piezoPin, OUTPUT);       // Налаштування піна для п'єзоелектричного динаміка як вихідного
 }
 
 void loop() {
   motor.tick();
 
-  if (digitalRead(buttonPin) == HIGH) { // Если кнопка нажата
+  if (digitalRead(buttonPin) == HIGH) { // Якщо кнопка натиснута
     delay(200); // Антидребезг
-    handleLockAction(); // Обработка действия по кнопке
+    handleLockAction(); // Обробка дії за кнопкою
   }
 
-  // Проверка наличия данных от RFID модуля
+  // Перевірка наявності даних від RFID модуля
   if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
     String cardUID = "";
     for (byte i = 0; i < rfid.uid.size; i++) {
@@ -47,18 +47,18 @@ void loop() {
 
     if (isValidCard(cardUID)) {
       Serial.println("Valid card detected: " + cardUID);
-      handleLockAction(); // Обработка действия по карте
+      handleLockAction(); // Обробка дії за картою
     } else {
       Serial.println("Invalid card detected: " + cardUID);
-      errorBeep(); // Звуковой сигнал ошибки
+      errorBeep(); // Звуковий сигнал помилки
     }
 
-    // Задержка перед следующей проверкой карты
+    // Затримка перед наступною перевіркою карти
     delay(1000);
   }
 }
 
-// Функция проверки допустимости карты
+// Функція перевірки допустимості карти
 bool isValidCard(String cardUID) {
   for (int i = 0; i < 4; i++) {
     if (cardUID == validCards[i]) {
@@ -68,63 +68,51 @@ bool isValidCard(String cardUID) {
   return false;
 }
 
-// Функция обработки действий по карте или кнопке
+// Функція обробки дій за картою або кнопкою
 void handleLockAction() {
-  if (digitalRead(doorSensorPin) == LOW) { // Если дверь закрыта
+  if (digitalRead(doorSensorPin) == LOW) { // Якщо двері зачинені
     if (lockState) {
-      unlock(); // Открытие замка
+      unlock(); // Відкриття замка
     } else {
-      lock(); // Закрытие замка
+      lock(); // Закриття замка
     }
   }
 }
 
-// тайминги для двойного моторчика, подбирай индивидуально, скетч test.ino
-//  B1002260   back
-//  F1002000   forvard
-//  F070300     forvard mini
-
-// тайминг для одинарного моторчика,
-
-// Функция закрытия замка
+// Функція закриття замка
 void lock() {
   Serial.println("Locking the door...");
-  motor.setSpeedPerc(100); // Закрытие замка
-  delay(2000); // Вращаем мотор 2 секунды для закрытия замка
-  motor.stop(); // Остановка
+  motor.setSpeedPerc(100); // Закриття замка
+  delay(2000); // Обертання мотора 2 секунди для закриття замка
+  motor.stop();
   lockState = true;
-  beep(); // Звуковой сигнал успешной операции
+  beep(); // Звуковий сигнал успішної операції
 }
 
-// Функция открытия замка
+// Функція відкриття замка
 void unlock() {
   Serial.println("Unlocking the door...");
-  motor.setSpeedPerc(-100); // Открытие замка
-  delay(2250); // Вращаем мотор 2 секунды для открытия замка
-  motor.stop(); // Остановка
-  delay(300);
-  motor.setSpeedPerc(70); //возввращаю язычок замка
-  delay(300);
-  motor.stop(); // Остановка
-  
+  motor.setSpeedPerc(-100); // Відкриття замка
+  delay(2000); // Обертання мотора 2 секунди для відкриття замка
+  motor.stop();
   lockState = false;
-  beep(); // Звуковой сигнал успешной операции
+  beep(); // Звуковий сигнал успішної операції
 }
 
-// Функция воспроизведения звукового сигнала
+// Функція відтворення звукового сигналу
 void beep() {
   digitalWrite(piezoPin, HIGH);
-  delay(50); // Длительность звукового сигнала
+  delay(50); // Тривалість звукового сигналу
   digitalWrite(piezoPin, LOW);
-  delay(50); // Пауза между звуковыми сигналами
+  delay(50); // Пауза між звуковими сигналами
 }
 
-// Функция воспроизведения звукового сигнала ошибки
+// Функція відтворення звукового сигналу помилки
 void errorBeep() {
   for (int i = 0; i < 3; i++) {
     digitalWrite(piezoPin, HIGH);
-    delay(100); // Длительность звукового сигнала
+    delay(100); // Тривалість звукового сигналу
     digitalWrite(piezoPin, LOW);
-    delay(100); // Пауза между звуковыми сигналами
+    delay(100); // Пауза між звуковими сигналами
   }
 }
