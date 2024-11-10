@@ -1,3 +1,7 @@
+## Демонстрація
+
+[![Демонстрація проекту](https://img.youtube.com/vi/Y9I7PhSoi8w/0.jpg)](https://youtu.be/Y9I7PhSoi8w)
+
 # Проект: Керування замком за допомогою Arduino, RFID та кнопки
 
 ## Опис
